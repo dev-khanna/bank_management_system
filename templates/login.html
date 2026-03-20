@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ 'REGISTER' if mode == 'register' else 'LOGIN' }}{% endblock %}
+
+{% block content %}
+<!-- Full-screen centered auth layout -->
+<div class="min-h-screen flex items-center justify-center px-6 py-12">
+
+  <!-- Left side decoration (hidden on mobile) -->
+  <aside class="hidden lg:flex fixed left-0 top-0 bottom-0 w-12 flex-col justify-center items-center gap-8 pointer-events-none opacity-30">
+    <div class="w-[1px] h-40 bg-gradient-to-b from-transparent via-primary to-transparent"></div>
+    <div class="w-2 h-2 border border-primary rotate-45"></div>
+    <div class="w-[1px] h-40 bg-gradient-to-b from-transparent via-secondary to-transparent"></div>
+  </aside>
+
+  <!-- Right side decoration -->
+  <aside class="hidden lg:flex fixed right-0 top-0 bottom-0 w-12 flex-col justify-center items-end gap-8 pointer-events-none opacity-20 pr-4">
+    <div class="w-8  h-[1px] bg-secondary"></div>
+    <div class="w-12 h-[1px] bg-primary"></div>
+    <div class="w-5  h-[1px] bg-secondary"></div>
+    <div class="w-10 h-[1px] bg-primary"></div>
+  </aside>
+
+  <div class="w-full max-w-sm relative z-10">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <p class="text-secondary/60 font-headline text-[9px] tracking-[0.4em] uppercase mb-3">Bank Management System // V.2.0.1</p>
+      <h1 class="font-headline font-black text-primary text-4xl tracking-tighter uppercase leading-none">
+        {% if mode == 'register' %}NEW_USER<br/>REGISTER{% else %}ACCESS_GATE<br/>LOGIN{% endif %}
+      </h1>
+      <p class="text-on-surface-variant/60 font-headline text-[10px] tracking-[0.35em] uppercase mt-3">
+        {% if mode == 'register' %}Create Your Account{% else %}Authorization Required{% endif %}
+      </p>
+    </div>
+
+    <!-- Card -->
+    <section class="glass-card p-8 relative overflow-visible">
+      <!-- Corner accents -->
+      <div class="absolute top-0 right-0 w-6 h-6 border-t border-r border-primary/20"></div>
+      <div class="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-primary/20"></div>
+
+      <form method="POST" action="{{ url_for('register' if mode == 'register' else 'login') }}" class="space-y-7">
+
+        <!-- Name -->
+        <div class="group">
+          <label class="block text-[9px] font-headline uppercase tracking-[0.25em] text-on-surface-variant mb-2 group-focus-within:text-primary transition-colors">
+            Username
+          </label>
+          <input name="name" type="text" required autocomplete="username"
+                 placeholder="Your name"
+                 class="input-field w-full bg-transparent border-b-2 border-outline-variant py-3 text-primary font-headline tracking-widest text-sm transition-all placeholder:text-surface-container-highest placeholder:text-sm"/>
+        </div>
+
+        <!-- Password -->
+        <div class="group">
+          <label class="block text-[9px] font-headline uppercase tracking-[0.25em] text-on-surface-variant mb-2 group-focus-within:text-primary transition-colors">
+            Password {% if mode == 'register' %}<span class="text-outline/60 normal-case tracking-normal font-body">(min 8 chars)</span>{% endif %}
+          </label>
+          <input name="password" type="password" required autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}"
+                 placeholder="••••••••"
+                 class="input-field w-full bg-transparent border-b-2 border-outline-variant py-3 text-primary font-headline tracking-widest text-sm transition-all placeholder:text-surface-container-highest"/>
+        </div>
+
+        <!-- CTA -->
+        <div class="pt-3 space-y-4">
+          <button type="submit"
+                  class="money-btn w-full bg-primary text-on-primary py-4 font-headline font-black uppercase tracking-[0.3em] text-xs transition-all active:scale-[0.97]">
+            {% if mode == 'register' %}Create Account{% else %}Login to Terminal{% endif %}
+          </button>
+
+          <div class="flex justify-center">
+            {% if mode == 'register' %}
+            <a href="{{ url_for('login') }}"
+               class="text-[9px] text-on-surface-variant/50 hover:text-primary uppercase tracking-widest transition-colors font-headline">
+              Already registered? Login →
+            </a>
+            {% else %}
+            <a href="{{ url_for('register') }}"
+               class="text-[9px] text-on-surface-variant/50 hover:text-primary uppercase tracking-widest transition-colors font-headline">
+              New user? Register →
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <!-- Security meta -->
+    <div class="mt-6 flex justify-between items-start opacity-35">
+      <div class="space-y-0.5">
+        <p class="text-[8px] font-body uppercase tracking-tight text-secondary font-variant-numeric tabular-nums">MAX_ATTEMPTS: 03</p>
+        <p class="text-[8px] font-body uppercase tracking-tight text-on-surface">LOCKOUT: 05_MIN</p>
+      </div>
+      <div class="text-right space-y-0.5">
+        <p class="text-[8px] font-body uppercase tracking-tight text-on-surface">AUTH_PATH: BCRYPT_R14</p>
+        <p class="text-[8px] font-body uppercase tracking-tight text-secondary">SALT: AUTO_GENERATED</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer badge -->
+<footer class="fixed bottom-6 left-0 w-full text-center pointer-events-none z-10">
+  <div class="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant/20 bg-surface-container-low/40 backdrop-blur-sm">
+    <span class="material-symbols-outlined text-[13px] text-secondary">verified_user</span>
+    <span class="text-[8px] font-headline text-on-surface-variant uppercase tracking-[0.2em]">Cryptographic Verification Active</span>
+  </div>
+</footer>
+{% endblock %}

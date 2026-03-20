@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}DEPOSIT
+</div>
+{% endblock %}
+{% block page_label %}Deposit Terminal
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="px-8 py-8 max-w-5xl space-y-8">
+
+
+  <!-- Header -->
+  <div class="space-y-1 pt-2">
+    <p class="font-headline text-secondary/60 text-[9px] tracking-[0.4em] uppercase">Inflow // {{ name | upper }}</p>
+    <h2 class="font-headline font-black text-3xl text-primary tracking-tighter uppercase">Deposit_Terminal</h2>
+  </div>
+
+  <!-- Current balance pill -->
+  <div class="inline-flex items-center gap-4 bg-surface-container-low/60 px-5 py-3">
+    <span class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/60">Current Balance</span>
+    <span class="font-headline font-black text-primary tabular-nums">₹{{ "{:,.0f}".format(balance) }}</span>
+  </div>
+
+  <!-- Form card -->
+  <section class="glass-card p-8 relative overflow-visible">
+    <div class="absolute top-0 right-0 w-6 h-6 border-t border-r border-secondary/20"></div>
+    <div class="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-secondary/20"></div>
+
+    <form method="POST" action="{{ url_for('deposit') }}" class="space-y-8">
+
+      <div class="group">
+        <label class="block text-[9px] font-headline uppercase tracking-[0.25em] text-on-surface-variant mb-2 group-focus-within:text-secondary transition-colors">
+          Amount to Deposit (₹)
+        </label>
+        <div class="flex items-baseline gap-3">
+          <span class="font-headline font-black text-2xl text-primary/40">₹</span>
+          <input name="amount" type="number" min="1" step="1" required
+                 placeholder="0"
+                 class="input-field flex-1 bg-transparent border-b-2 border-outline-variant py-3 text-primary font-headline tracking-widest text-2xl transition-all placeholder:text-surface-container-highest"
+                 style="appearance: textfield;"/>
+        </div>
+        <p class="text-[8px] font-body text-on-surface-variant/40 uppercase tracking-wide mt-2">Whole numbers only · No negative values</p>
+      </div>
+
+      <!-- Quick amounts -->
+      <div class="space-y-2">
+        <p class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/50">Quick Select</p>
+        <div class="grid grid-cols-4 gap-2">
+          {% for amt in [500, 1000, 5000, 10000] %}
+          <button type="button" onclick="document.querySelector('[name=amount]').value={{ amt }}"
+                  class="money-btn bg-surface-container/60 hover:bg-surface-container text-on-surface-variant hover:text-primary border border-outline-variant/20 hover:border-primary/30 py-2.5 font-headline text-[10px] tracking-wider uppercase transition-all">
+            ₹{{ "{:,}".format(amt) }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="submit"
+                class="money-btn flex-1 bg-secondary text-[#0e3726] py-4 font-headline font-black text-[10px] tracking-[0.3em] uppercase transition-all active:scale-[0.97] shadow-[0_0_20px_rgba(165,208,184,0.2)]">
+          Confirm Deposit
+        </button>
+        <a href="{{ url_for('dashboard') }}"
+           class="money-btn px-6 py-4 border border-outline-variant/30 text-on-surface-variant hover:text-primary hover:border-primary/30 font-headline text-[10px] tracking-widest uppercase transition-all">
+          Cancel
+        </a>
+      </div>
+    </form>
+  </section>
+
+  <!-- Terminal meta -->
+  <div class="flex justify-between opacity-30">
+    <p class="text-[8px] font-body uppercase tracking-tight text-secondary tabular-nums">TXN_ROUTE: SQLITE_LOCAL</p>
+    <p class="text-[8px] font-body uppercase tracking-tight text-on-surface">ATOMIC: TRUE</p>
+  </div>
+
+</div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}DASHBOARD{% endblock %}
+{% block page_label %}Account Dashboard{% endblock %}
+
+
+{% block content %}
+<div class="px-8 py-8 max-w-5xl space-y-10">
+
+  <!-- ── Hero balance section ─────────────────────────── -->
+  <section class="flex flex-col lg:flex-row lg:items-end justify-between gap-8 pt-4">
+    <div class="space-y-2">
+      <p class="font-headline text-primary/50 text-[9px] tracking-[0.4em] uppercase">
+        ACCOUNT_DASHBOARD // {{ name | upper }}
+      </p>
+      <div class="flex items-baseline gap-2">
+        <h2 class="font-headline font-black text-6xl lg:text-7xl text-primary tracking-tighter tabular-nums leading-none">
+          ₹{{ "{:,.0f}".format(balance) }}
+        </h2>
+        <span class="text-primary/30 font-headline text-xl">.00</span>
+      </div>
+      <p class="text-on-surface-variant/50 font-headline text-[9px] tracking-widest uppercase mt-1">Total Balance</p>
+    </div>
+
+    <!-- Quick action buttons -->
+    <div class="flex gap-3">
+      <a href="{{ url_for('deposit') }}"
+         class="money-btn bg-primary text-on-primary px-8 py-4 font-headline font-black text-[10px] tracking-[0.3em] uppercase transition-all active:scale-[0.97] shadow-[0_0_24px_rgba(242,202,80,0.2)]">
+        Deposit
+      </a>
+      <a href="{{ url_for('withdraw') }}"
+         class="money-btn money-btn-outline border border-primary text-primary px-8 py-4 font-headline font-black text-[10px] tracking-[0.3em] uppercase hover:bg-primary/8 transition-all active:scale-[0.97]">
+        Withdraw
+      </a>
+    </div>
+  </section>
+
+  <!-- ── Divider ────────────────────────────────────────── -->
+  <div class="h-[1px] bg-gradient-to-r from-primary/20 via-outline-variant/20 to-transparent"></div>
+
+  <!-- ── Stats row ─────────────────────────────────────── -->
+  <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {% set deposits   = recent | selectattr('state', 'eq', 'Deposited') | list %}
+    {% set withdrawals = recent | selectattr('state', 'eq', 'Withdrawn') | list %}
+
+    <div class="bg-surface-container-low/50 p-5 border-l-2 border-primary/40">
+      <p class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/60 mb-2">Total Transactions</p>
+      <p class="font-headline font-black text-2xl text-primary tabular-nums">{{ recent | length }}</p>
+      <p class="text-[8px] text-on-surface-variant/40 font-headline uppercase tracking-wider mt-1">Recent 5</p>
+    </div>
+
+    <div class="bg-surface-container-low/50 p-5 border-l-2 border-secondary/40">
+      <p class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/60 mb-2">Last Deposit</p>
+      {% if deposits %}
+      <p class="font-headline font-black text-2xl text-secondary tabular-nums">₹{{ "{:,.0f}".format(deposits[0].amount) }}</p>
+      {% else %}
+      <p class="font-headline font-black text-2xl text-on-surface-variant/30">—</p>
+      {% endif %}
+      <p class="text-[8px] text-on-surface-variant/40 font-headline uppercase tracking-wider mt-1">Inflow</p>
+    </div>
+
+    <div class="bg-surface-container-low/50 p-5 border-l-2 border-error/30">
+      <p class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/60 mb-2">Last Withdrawal</p>
+      {% if withdrawals %}
+      <p class="font-headline font-black text-2xl text-error tabular-nums">₹{{ "{:,.0f}".format(-withdrawals[0].amount) }}</p>
+      {% else %}
+      <p class="font-headline font-black text-2xl text-on-surface-variant/30">—</p>
+      {% endif %}
+      <p class="text-[8px] text-on-surface-variant/40 font-headline uppercase tracking-wider mt-1">Outflow</p>
+    </div>
+
+    <div class="bg-surface-container-low/50 p-5 border-l-2 border-outline-variant/60">
+      <p class="text-[9px] font-headline uppercase tracking-widest text-on-surface-variant/60 mb-2">Account Status</p>
+      <div class="flex items-center gap-2 mt-1">
+        <span class="w-2 h-2 bg-secondary rounded-full shadow-[0_0_6px_#a5d0b8]"></span>
+        <p class="font-headline font-bold text-secondary text-xs tracking-widest uppercase">Active</p>
+      </div>
+      <p class="text-[8px] text-on-surface-variant/40 font-headline uppercase tracking-wider mt-2">Encrypted</p>
+    </div>
+  </section>
+
+  <!-- ── Recent transactions ────────────────────────────── -->
+  <section>
+    <div class="flex justify-between items-end mb-5">
+      <h3 class="font-headline text-[10px] tracking-[0.35em] uppercase text-on-surface-variant">Recent Transactions</h3>
+      <a href="{{ url_for('history') }}" class="text-[9px] font-headline uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">
+        View all →
+      </a>
+    </div>
+
+    {% if recent %}
+    <div class="space-y-1">
+      {% for txn in recent %}
+      <div class="flex justify-between items-center px-5 py-4
+                  {% if loop.index is odd %}bg-surface-container-low/30{% else %}bg-surface-container-lowest/40{% endif %}
+                  group hover:bg-surface-container/50 transition-colors">
+        <div class="flex items-center gap-4">
+          <div class="w-7 h-7 flex items-center justify-center
+                      {% if txn.state == 'Deposited' %}text-secondary{% else %}text-error{% endif %}">
+            <span class="material-symbols-outlined text-[17px]">
+              {{ 'arrow_downward' if txn.state == 'Deposited' else 'arrow_upward' }}
+            </span>
+          </div>
+          <div>
+            <p class="font-headline font-semibold text-xs tracking-widest uppercase
+                       {% if txn.state == 'Deposited' %}text-secondary{% else %}text-error{% endif %}">
+              {{ txn.state }}
+            </p>
+            <p class="text-[9px] text-on-surface-variant/50 font-body mt-0.5 tabular-nums">{{ txn.time }}</p>
+          </div>
+        </div>
+        <p class="font-headline font-black text-sm tabular-nums
+                  {% if txn.state == 'Deposited' %}text-secondary{% else %}text-error{% endif %}">
+          {{ '+' if txn.state == 'Deposited' else '-' }}₹{{ "{:,.0f}".format(txn.amount | abs) }}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-surface-container-low/30 px-6 py-10 text-center">
+      <span class="material-symbols-outlined text-3xl text-on-surface-variant/20 block mb-3">receipt_long</span>
+      <p class="font-headline text-[10px] uppercase tracking-widest text-on-surface-variant/40">No transactions yet</p>
+    </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endblock %}

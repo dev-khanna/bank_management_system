@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>{% block title %}BMS{% endblock %} | BANK MANAGEMENT SYSTEM</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "primary": "#f2ca50", "primary-container": "#d4af37", "on-primary": "#3c2f00",
+        "secondary": "#a5d0b8", "secondary-container": "#2c5340", "on-secondary-container": "#9bc5ad",
+        "surface": "#131313", "surface-dim": "#131313",
+        "surface-container-lowest": "#0e0e0e", "surface-container-low": "#1c1b1b",
+        "surface-container": "#201f1f", "surface-container-high": "#2a2a2a",
+        "surface-container-highest": "#353534",
+        "on-surface": "#e5e2e1", "on-surface-variant": "#d0c5af",
+        "outline": "#99907c", "outline-variant": "#4d4635",
+        "error": "#ffb4ab", "error-container": "#93000a",
+      },
+      fontFamily: { "headline": ["Space Grotesk"], "body": ["Inter"] },
+      borderRadius: { "DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px" },
+    },
+  },
+}
+</script>
+<style>
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24; }
+  body { background-color: #050505; color: #e5e2e1; }
+  .noir-bg {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 110%, rgba(44,83,64,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 0% 80%, rgba(242,202,80,0.04) 0%, transparent 60%),
+      #050505;
+  }
+  .grid-overlay {
+    background-image: linear-gradient(to right, rgba(242,202,80,0.03) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(242,202,80,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .glass-card { background: rgba(20,19,19,0.75); backdrop-filter: blur(32px); }
+  .input-field:focus {
+    border-color: #f2ca50;
+    box-shadow: 0 2px 0 0 rgba(242,202,80,0.25), 0 4px 16px rgba(165,208,184,0.08);
+    outline: none;
+  }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: #0e0e0e; }
+  ::-webkit-scrollbar-thumb { background: #353534; }
+
+  /* ── Scan lines: 1px dark line every 4px — CRT terminal feel ── */
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent         0px,
+      transparent         3px,
+      rgba(0,0,0,0.13)    3px,
+      rgba(0,0,0,0.13)    4px
+    );
+    background-size: 100% 4px;
+    mix-blend-mode: multiply;
+  }
+
+  /* ── Film grain: SVG fractal noise at ~3.5% opacity ── */
+  .grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.038'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 200px 200px;
+  }
+
+  .money-btn { position: relative; overflow: visible; }
+  .money-particle {
+    position: absolute; pointer-events: none;
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 11px;
+    color: #f2ca50; opacity: 0; user-select: none; z-index: 100;
+    animation: money-float var(--dur, 0.8s) ease-out forwards;
+    text-shadow: 0 0 8px rgba(242,202,80,0.8);
+  }
+  .money-particle.dot {
+    width: 4px; height: 4px; background: #f2ca50; border-radius: 50%;
+    font-size: 0; box-shadow: 0 0 6px rgba(242,202,80,0.9);
+  }
+  .money-particle.green { color: #a5d0b8; text-shadow: 0 0 8px rgba(165,208,184,0.8); }
+  @keyframes money-float {
+    0%   { opacity: 0;   transform: translate(var(--tx0), var(--ty0)) scale(0.5); }
+    15%  { opacity: 1; }
+    80%  { opacity: 0.6; transform: translate(var(--tx1), var(--ty1)) scale(1); }
+    100% { opacity: 0;   transform: translate(var(--tx2), var(--ty2)) scale(0.8); }
+  }
+  .money-btn:hover         { box-shadow: 0 0 28px rgba(242,202,80,0.25), 0 0 8px rgba(242,202,80,0.12); }
+  .money-btn-outline:hover { box-shadow: 0 0 20px rgba(242,202,80,0.15); }
+
+  .nav-link-active {
+    color: #f2ca50 !important; opacity: 1 !important;
+    background: rgba(53,53,52,0.5); border-right: 2px solid #f2ca50;
+    box-shadow: 0 0 12px rgba(44,83,64,0.25);
+  }
+  .flash-success { background: rgba(44,83,64,0.3);  border-left: 2px solid #a5d0b8; color: #a5d0b8; }
+  .flash-error   { background: rgba(147,0,10,0.25); border-left: 2px solid #ffb4ab; color: #ffb4ab; }
+</style>
+</head>
+<body class="font-body noir-bg min-h-screen">
+
+<div class="fixed inset-0 grid-overlay pointer-events-none z-0"></div>
+<!-- Scan lines -->
+<div class="fixed inset-0 scanlines pointer-events-none z-0"></div>
+<!-- Film grain -->
+<div class="fixed inset-0 grain pointer-events-none z-0"></div>
+
+{% if session.user %}
+<nav class="fixed left-0 top-0 h-full w-60 flex flex-col py-8 z-40 bg-[#050505]/90 backdrop-blur-xl shadow-[1px_0_0_0_rgba(77,70,53,0.2)]">
+  <div class="px-6 mb-10">
+    <h2 class="text-primary font-headline font-black text-xs tracking-[0.3em] uppercase">BMS_TERMINAL</h2>
+    <p class="text-secondary/40 font-headline text-[9px] tracking-[0.25em] uppercase mt-1">V.2.0.1 // SECURE</p>
+  </div>
+  <div class="flex flex-col flex-1 space-y-1 px-3">
+    <a href="{{ url_for('dashboard') }}" class="nav-link flex items-center gap-3 px-3 py-3 text-on-surface-variant opacity-60 hover:opacity-100 hover:text-primary transition-all font-headline text-[11px] tracking-widest uppercase {{ 'nav-link-active' if request.endpoint == 'dashboard' }}">
+      <span class="material-symbols-outlined text-[18px]">dashboard</span>Dashboard
+    </a>
+    <a href="{{ url_for('deposit') }}" class="nav-link flex items-center gap-3 px-3 py-3 text-on-surface-variant opacity-60 hover:opacity-100 hover:text-primary transition-all font-headline text-[11px] tracking-widest uppercase {{ 'nav-link-active' if request.endpoint == 'deposit' }}">
+      <span class="material-symbols-outlined text-[18px]">account_balance</span>Deposit
+    </a>
+    <a href="{{ url_for('withdraw') }}" class="nav-link flex items-center gap-3 px-3 py-3 text-on-surface-variant opacity-60 hover:opacity-100 hover:text-primary transition-all font-headline text-[11px] tracking-widest uppercase {{ 'nav-link-active' if request.endpoint == 'withdraw' }}">
+      <span class="material-symbols-outlined text-[18px]">payments</span>Withdraw
+    </a>
+    <a href="{{ url_for('history') }}" class="nav-link flex items-center gap-3 px-3 py-3 text-on-surface-variant opacity-60 hover:opacity-100 hover:text-primary transition-all font-headline text-[11px] tracking-widest uppercase {{ 'nav-link-active' if request.endpoint == 'history' }}">
+      <span class="material-symbols-outlined text-[18px]">history</span>History
+    </a>
+
+    <!-- Divider -->
+    <div class="my-2 h-[1px] bg-outline-variant/20 mx-2"></div>
+
+
+  </div>
+  <div class="px-4 mt-auto space-y-3">
+    <div class="px-2 py-3 bg-surface-container-low/60">
+      <p class="text-[9px] text-outline uppercase tracking-widest font-headline">Logged in as</p>
+      <p class="text-primary font-headline font-bold text-xs tracking-wider truncate mt-0.5">{{ session.user }}</p>
+    </div>
+    <a href="{{ url_for('logout') }}" class="money-btn flex items-center justify-center gap-2 w-full py-3 border border-outline-variant/30 text-on-surface-variant hover:text-error hover:border-error/30 font-headline text-[10px] tracking-widest uppercase transition-all">
+      <span class="material-symbols-outlined text-[16px]">logout</span>Logout
+    </a>
+  </div>
+</nav>
+
+<header class="fixed top-0 left-60 right-0 z-50 flex justify-between items-center px-8 py-4 bg-[#050505]/80 backdrop-blur-xl shadow-[0_1px_0_0_rgba(77,70,53,0.2)]">
+  <div class="flex items-center gap-3">
+    <h1 class="font-headline font-black text-lg tracking-tight text-primary uppercase">Bank Management System</h1>
+    <span class="text-outline-variant/50 text-xs font-headline">//</span>
+    <span class="text-secondary/50 font-headline text-[10px] tracking-[0.2em] uppercase">{% block page_label %}Terminal{% endblock %}</span>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="w-1.5 h-1.5 bg-secondary rounded-full shadow-[0_0_6px_#a5d0b8]"></span>
+    <span class="text-secondary font-headline text-[9px] tracking-[0.25em] uppercase">Encrypted</span>
+  </div>
+</header>
+{% endif %}
+
+<div class="{{ 'ml-60 pt-20' if session.user else '' }} relative z-10 min-h-screen">
+
+  <!-- Flash messages — always rendered regardless of auth state -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% if session.user %}
+    <div class="px-8 pt-6 max-w-5xl space-y-2">
+    {% else %}
+    <div class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-md px-6 space-y-2">
+    {% endif %}
+      {% for cat, msg in messages %}
+      <div class="flash-{{ cat }} px-5 py-3 font-headline text-xs tracking-wider uppercase flex items-center gap-3">
+        <span class="material-symbols-outlined text-[16px]">{{ 'check_circle' if cat == 'success' else 'error' }}</span>{{ msg }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+
+</div>
+
+<!-- Watermark -->
+<div class="fixed bottom-5 right-6 z-50 pointer-events-none">
+  <p class="text-[9px] font-headline uppercase tracking-[0.25em] text-secondary/70"
+     style="text-shadow: 0 0 10px rgba(165,208,184,0.5), 0 0 20px rgba(165,208,184,0.2);">
+    A Dev Khanna Product
+  </p>
+</div>
+
+<script>
+const SYMBOLS = ['₹','₹','₹','•','◆','₹','·'];
+function spawnParticles(btn, count, isBurst) {
+  const rect = btn.getBoundingClientRect(), bw = rect.width, bh = rect.height;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('span');
+    const isGreen = Math.random() < 0.2, isDot = Math.random() < 0.25;
+    el.className = 'money-particle' + (isDot?' dot':'') + (isGreen?' green':'');
+    if (!isDot) el.textContent = SYMBOLS[Math.floor(Math.random()*SYMBOLS.length)];
+    const side = Math.floor(Math.random()*4);
+    let sx, sy;
+    if      (side===0) { sx=Math.random()*bw; sy=0; }
+    else if (side===1) { sx=bw;  sy=Math.random()*bh; }
+    else if (side===2) { sx=Math.random()*bw; sy=bh; }
+    else               { sx=0;   sy=Math.random()*bh; }
+    el.style.left=sx+'px'; el.style.top=sy+'px';
+    const angle=Math.atan2(sy-bh/2, sx-bw/2);
+    const spread=isBurst?(Math.random()*55+20):(Math.random()*35+10);
+    const drift=(Math.random()-0.5)*20;
+    const dur=(Math.random()*0.4+(isBurst?0.5:0.6)).toFixed(2);
+    el.style.setProperty('--tx0','0px'); el.style.setProperty('--ty0','0px');
+    el.style.setProperty('--tx1',(Math.cos(angle)*spread*0.6+drift)+'px');
+    el.style.setProperty('--ty1',(Math.sin(angle)*spread*0.6-spread*0.4)+'px');
+    el.style.setProperty('--tx2',(Math.cos(angle)*spread+drift*1.5)+'px');
+    el.style.setProperty('--ty2',(Math.sin(angle)*spread-spread*0.8)+'px');
+    el.style.setProperty('--dur',dur+'s');
+    el.style.animationDelay=(Math.random()*0.12).toFixed(2)+'s';
+    btn.appendChild(el);
+    setTimeout(()=>el.remove(),(parseFloat(dur)+0.2)*1000);
+  }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.money-btn').forEach(btn=>{
+    let iv=null;
+    btn.addEventListener('mouseenter',()=>{ spawnParticles(btn,7,false); iv=setInterval(()=>spawnParticles(btn,4,false),350); });
+    btn.addEventListener('mouseleave',()=>{ clearInterval(iv); iv=null; });
+    btn.addEventListener('click',()=>spawnParticles(btn,18,true));
+  });
+});
+</script>
+</body>
+</html>
