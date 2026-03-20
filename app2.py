@@ -5,12 +5,12 @@ import bcrypt
 import os
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'fallback-dev-key')  # replace with a fixed secret in production
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback-dev-key')  
 
 DB_PATH = '/data/BANKING_SESSION.db'
 
-# ── Database bootstrap ────────────────────────────────────────────────────────
 def get_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     db = sqlite3.connect(DB_PATH)
     db.row_factory = sqlite3.Row
     return db
@@ -26,14 +26,12 @@ def init_db():
 
 init_db()
 
-# ── Password helpers ──────────────────────────────────────────────────────────
 def hash_pwd(password: str, rounds: int = 12) -> bytes:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=rounds))
 
 def check_pwd(password: str, hashed: bytes) -> bool:
     return bcrypt.checkpw(password.encode(), hashed)
 
-# ── Auth helpers ──────────────────────────────────────────────────────────────
 MAX_ATTEMPTS  = 3
 LOCKOUT_MINS  = 5
 MIN_ROUNDS    = 14
@@ -75,7 +73,6 @@ def upgrade_hash(db, name: str, password: str):
         except Exception:
             db.rollback()
 
-# ── Auth guard ────────────────────────────────────────────────────────────────
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -85,7 +82,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ── Routes ────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
     if 'user' in session:
