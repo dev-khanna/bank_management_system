@@ -10,15 +10,20 @@ app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-key')
 
 DB_URL = os.environ.get('DATABASE_URL')
 
+import ssl 
+
 def get_db():
     r = urllib.parse.urlparse(DB_URL)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
     conn = pg8000.native.Connection(
         host=r.hostname,
         port=r.port or 5432,
         database=r.path.lstrip('/'),
         user=r.username,
         password=r.password,
-        ssl_context=True
+        ssl_context=ssl_context
     )
     return conn
 
@@ -37,36 +42,39 @@ def execute(conn, sql, params=()):
 @app.before_request
 def setup():
     if not getattr(app, '_db_initialized', False):
-        conn = get_db()
-        conn.run('''
-            CREATE TABLE IF NOT EXISTS accounts (
-                name TEXT UNIQUE NOT NULL,
-                pwd_hash BYTEA,
-                balance INTEGER DEFAULT 0
-            )
-        ''')
-        conn.run('''
-            CREATE TABLE IF NOT EXISTS history (
-                time TEXT,
-                name TEXT,
-                amount INTEGER
-            )
-        ''')
-        conn.run('''
-            CREATE TABLE IF NOT EXISTS pwd_meta (
-                name TEXT UNIQUE NOT NULL,
-                pwd_rounds INTEGER
-            )
-        ''')
-        conn.run('''
-            CREATE TABLE IF NOT EXISTS login_attempts (
-                name TEXT UNIQUE NOT NULL,
-                attempts INTEGER,
-                last_attempt TEXT
-            )
-        ''')
-        conn.close()
-        app._db_initialized = True
+        try:
+            conn = get_db()
+            conn.run('''
+                CREATE TABLE IF NOT EXISTS accounts (
+                    name TEXT UNIQUE NOT NULL,
+                    pwd_hash BYTEA,
+                    balance INTEGER DEFAULT 0
+                )
+            ''')
+            conn.run('''
+                CREATE TABLE IF NOT EXISTS history (
+                    time TEXT,
+                    name TEXT,
+                    amount INTEGER
+                )
+            ''')
+            conn.run('''
+                CREATE TABLE IF NOT EXISTS pwd_meta (
+                    name TEXT UNIQUE NOT NULL,
+                    pwd_rounds INTEGER
+                )
+            ''')
+            conn.run('''
+                CREATE TABLE IF NOT EXISTS login_attempts (
+                    name TEXT UNIQUE NOT NULL,
+                    attempts INTEGER,
+                    last_attempt TEXT
+                )
+            ''')
+            conn.close()
+            app._db_initialized = True
+        except Exception as e:
+            app.logger.error(f"DB init error: {e}")
 
 def hash_pwd(password: str, rounds: int = 12) -> bytes:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=rounds))
