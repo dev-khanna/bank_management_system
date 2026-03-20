@@ -1,70 +1,55 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from datetime import datetime, timezone
-import pg8000.native
+import psycopg2
+import psycopg2.extras
 import bcrypt
 import os
-import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-key')
 
 DB_URL = os.environ.get('DATABASE_URL')
 
-import ssl 
-
 def get_db():
-    r = urllib.parse.urlparse(DB_URL)
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    conn = pg8000.native.Connection(
-        host=r.hostname,
-        port=r.port or 5432,
-        database=r.path.lstrip('/'),
-        user=r.username,
-        password=r.password,
-        ssl_context=ssl_context
-    )
+    conn = psycopg2.connect(DB_URL)
+    conn.autocommit = True
     return conn
 
 def query(conn, sql, params=()):
-    """Run a SELECT and return list of dicts."""
-    rows = conn.run(sql, *params)
-    if not rows:
-        return []
-    cols = [c['name'] for c in conn.columns]
-    return [dict(zip(cols, row)) for row in rows]
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(sql, params)
+        return [dict(row) for row in cur.fetchall()]
 
 def execute(conn, sql, params=()):
-    """Run INSERT / UPDATE / DELETE."""
-    conn.run(sql, *params)
+    with conn.cursor() as cur:
+        cur.execute(sql, params)
 
 @app.before_request
 def setup():
     if not getattr(app, '_db_initialized', False):
         try:
             conn = get_db()
-            conn.run('''
+            conn.cursor().execute('''
                 CREATE TABLE IF NOT EXISTS accounts (
                     name TEXT UNIQUE NOT NULL,
                     pwd_hash BYTEA,
                     balance INTEGER DEFAULT 0
                 )
             ''')
-            conn.run('''
+            conn.cursor().execute('''
                 CREATE TABLE IF NOT EXISTS history (
                     time TEXT,
                     name TEXT,
                     amount INTEGER
                 )
             ''')
-            conn.run('''
+            conn.cursor().execute('''
                 CREATE TABLE IF NOT EXISTS pwd_meta (
                     name TEXT UNIQUE NOT NULL,
                     pwd_rounds INTEGER
                 )
             ''')
-            conn.run('''
+            conn.cursor().execute('''
                 CREATE TABLE IF NOT EXISTS login_attempts (
                     name TEXT UNIQUE NOT NULL,
                     attempts INTEGER,
@@ -91,37 +76,37 @@ LOCKOUT_MINS = 5
 MIN_ROUNDS   = 14
 
 def is_locked(conn, name: str) -> bool:
-    rows = query(conn, 'SELECT attempts, last_attempt FROM login_attempts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT attempts, last_attempt FROM login_attempts WHERE name=%s', (name,))
     if not rows or rows[0]['attempts'] < MAX_ATTEMPTS:
         return False
     elapsed = (datetime.now() - datetime.fromisoformat(rows[0]['last_attempt'])).total_seconds() / 60
     if elapsed < LOCKOUT_MINS:
         return True
-    execute(conn, 'DELETE FROM login_attempts WHERE name=$1', (name,))
+    execute(conn, 'DELETE FROM login_attempts WHERE name=%s', (name,))
     return False
 
 def track_attempt(conn, name: str):
     now = datetime.now().isoformat()
-    rows = query(conn, 'SELECT attempts FROM login_attempts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT attempts FROM login_attempts WHERE name=%s', (name,))
     if rows:
         execute(conn,
-            'UPDATE login_attempts SET attempts=$1, last_attempt=$2 WHERE name=$3',
+            'UPDATE login_attempts SET attempts=%s, last_attempt=%s WHERE name=%s',
             (rows[0]['attempts'] + 1, now, name))
     else:
-        execute(conn, 'INSERT INTO login_attempts VALUES ($1, 1, $2)', (name, now))
+        execute(conn, 'INSERT INTO login_attempts VALUES (%s, 1, %s)', (name, now))
 
 def remaining_attempts(conn, name: str) -> int:
-    rows = query(conn, 'SELECT attempts FROM login_attempts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT attempts FROM login_attempts WHERE name=%s', (name,))
     return MAX_ATTEMPTS - (rows[0]['attempts'] if rows else 0)
 
 def upgrade_hash(conn, name: str, password: str):
-    rows = query(conn, 'SELECT pwd_rounds FROM pwd_meta WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT pwd_rounds FROM pwd_meta WHERE name=%s', (name,))
     current = rows[0]['pwd_rounds'] if rows else 12
     if current < MIN_ROUNDS:
         new_hash = hash_pwd(password, MIN_ROUNDS)
         try:
-            execute(conn, 'UPDATE accounts SET pwd_hash=$1 WHERE name=$2', (new_hash, name))
-            execute(conn, 'UPDATE pwd_meta SET pwd_rounds=$1 WHERE name=$2', (MIN_ROUNDS, name))
+            execute(conn, 'UPDATE accounts SET pwd_hash=%s WHERE name=%s', (new_hash, name))
+            execute(conn, 'UPDATE pwd_meta SET pwd_rounds=%s WHERE name=%s', (MIN_ROUNDS, name))
         except Exception:
             pass
 
@@ -155,7 +140,7 @@ def login():
             conn.close()
             return redirect(url_for('login'))
 
-        rows = query(conn, 'SELECT pwd_hash FROM accounts WHERE name=$1', (name,))
+        rows = query(conn, 'SELECT pwd_hash FROM accounts WHERE name=%s', (name,))
         if not rows:
             flash('User not found. Please register first.', 'error')
             conn.close()
@@ -172,7 +157,7 @@ def login():
             conn.close()
             return redirect(url_for('login'))
 
-        execute(conn, 'DELETE FROM login_attempts WHERE name=$1', (name,))
+        execute(conn, 'DELETE FROM login_attempts WHERE name=%s', (name,))
         upgrade_hash(conn, name, password)
         conn.close()
         session['user'] = name
@@ -199,7 +184,7 @@ def register():
             conn.close()
             return redirect(url_for('register'))
 
-        rows = query(conn, 'SELECT name FROM accounts WHERE name=$1', (name,))
+        rows = query(conn, 'SELECT name FROM accounts WHERE name=%s', (name,))
         if rows:
             flash('Username already taken. Please log in instead.', 'error')
             conn.close()
@@ -208,10 +193,10 @@ def register():
         pwd_hash = hash_pwd(password)
         try:
             execute(conn,
-                'INSERT INTO accounts (name, pwd_hash, balance) VALUES ($1, $2, 0)',
+                'INSERT INTO accounts (name, pwd_hash, balance) VALUES (%s, %s, 0)',
                 (name, pwd_hash))
             execute(conn,
-                'INSERT INTO pwd_meta (name, pwd_rounds) VALUES ($1, 12)',
+                'INSERT INTO pwd_meta (name, pwd_rounds) VALUES (%s, 12)',
                 (name,))
             flash('Registered successfully. Please log in.', 'success')
         except Exception as e:
@@ -234,11 +219,11 @@ def dashboard():
     name = session['user']
     conn = get_db()
 
-    rows = query(conn, 'SELECT balance FROM accounts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT balance FROM accounts WHERE name=%s', (name,))
     balance = rows[0]['balance'] if rows else 0
 
     history = query(conn,
-        'SELECT time, amount FROM history WHERE name=$1 ORDER BY time DESC LIMIT 5',
+        'SELECT time, amount FROM history WHERE name=%s ORDER BY time DESC LIMIT 5',
         (name,))
     conn.close()
 
@@ -272,13 +257,13 @@ def deposit():
             conn.close()
             return redirect(url_for('deposit'))
 
-        rows = query(conn, 'SELECT balance FROM accounts WHERE name=$1', (name,))
+        rows = query(conn, 'SELECT balance FROM accounts WHERE name=%s', (name,))
         new_bal   = rows[0]['balance'] + amt
         timestamp = datetime.now(timezone.utc).isoformat()
         try:
-            execute(conn, 'UPDATE accounts SET balance=$1 WHERE name=$2', (new_bal, name))
+            execute(conn, 'UPDATE accounts SET balance=%s WHERE name=%s', (new_bal, name))
             execute(conn,
-                'INSERT INTO history (time, name, amount) VALUES ($1, $2, $3)',
+                'INSERT INTO history (time, name, amount) VALUES (%s, %s, %s)',
                 (timestamp, name, amt))
             flash(f'Successfully deposited ₹{amt:,}.', 'success')
         except Exception as e:
@@ -287,7 +272,7 @@ def deposit():
             conn.close()
         return redirect(url_for('dashboard'))
 
-    rows = query(conn, 'SELECT balance FROM accounts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT balance FROM accounts WHERE name=%s', (name,))
     balance = rows[0]['balance'] if rows else 0
     conn.close()
     return render_template('deposit.html', name=name, balance=balance)
@@ -306,7 +291,7 @@ def withdraw():
             conn.close()
             return redirect(url_for('withdraw'))
 
-        rows = query(conn, 'SELECT balance FROM accounts WHERE name=$1', (name,))
+        rows = query(conn, 'SELECT balance FROM accounts WHERE name=%s', (name,))
         balance = rows[0]['balance'] if rows else 0
 
         if amt <= 0:
@@ -321,9 +306,9 @@ def withdraw():
         new_bal   = balance - amt
         timestamp = datetime.now(timezone.utc).isoformat()
         try:
-            execute(conn, 'UPDATE accounts SET balance=$1 WHERE name=$2', (new_bal, name))
+            execute(conn, 'UPDATE accounts SET balance=%s WHERE name=%s', (new_bal, name))
             execute(conn,
-                'INSERT INTO history (time, name, amount) VALUES ($1, $2, $3)',
+                'INSERT INTO history (time, name, amount) VALUES (%s, %s, %s)',
                 (timestamp, name, -amt))
             flash(f'Successfully withdrawn ₹{amt:,}.', 'success')
         except Exception as e:
@@ -332,7 +317,7 @@ def withdraw():
             conn.close()
         return redirect(url_for('dashboard'))
 
-    rows = query(conn, 'SELECT balance FROM accounts WHERE name=$1', (name,))
+    rows = query(conn, 'SELECT balance FROM accounts WHERE name=%s', (name,))
     balance = rows[0]['balance'] if rows else 0
     conn.close()
     return render_template('withdraw.html', name=name, balance=balance)
@@ -343,7 +328,7 @@ def history():
     name = session['user']
     conn = get_db()
     rows = query(conn,
-        'SELECT time, amount FROM history WHERE name=$1 ORDER BY time DESC',
+        'SELECT time, amount FROM history WHERE name=%s ORDER BY time DESC',
         (name,))
     conn.close()
 
