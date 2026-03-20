@@ -8,9 +8,8 @@ import os
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-fallback-key')
 
-DB_URL = os.environ.get('DATABASE_URL')  # set this in Vercel env vars
+DB_URL = os.environ.get('DATABASE_URL')  
 
-# ── Database connection ───────────────────────────────────────────────────────
 def get_db():
     conn = psycopg2.connect(DB_URL, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
@@ -49,9 +48,12 @@ def init_db():
     cur.close()
     conn.close()
 
-init_db()
+@app.before_request
+def setup():
+    if not getattr(app, '_db_initialized', False):
+        init_db()
+        app._db_initialized = True
 
-# ── Password helpers ──────────────────────────────────────────────────────────
 def hash_pwd(password: str, rounds: int = 12) -> bytes:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt(rounds=rounds))
 
@@ -60,7 +62,6 @@ def check_pwd(password: str, hashed: bytes) -> bool:
         hashed = bytes(hashed)
     return bcrypt.checkpw(password.encode(), hashed)
 
-# ── Auth helpers ──────────────────────────────────────────────────────────────
 MAX_ATTEMPTS = 3
 LOCKOUT_MINS = 5
 MIN_ROUNDS   = 14
@@ -120,7 +121,6 @@ def upgrade_hash(conn, name: str, password: str):
             conn.rollback()
     cur.close()
 
-# ── Auth guard ────────────────────────────────────────────────────────────────
 def login_required(f):
     from functools import wraps
     @wraps(f)
@@ -130,7 +130,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# ── Routes ────────────────────────────────────────────────────────────────────
 @app.route('/')
 def index():
     if 'user' in session:
