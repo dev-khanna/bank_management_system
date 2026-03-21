@@ -1,5 +1,7 @@
 Bank Management System
+
 A fully functional bank management system with thorough password security built with Flask and PostgreSQL, deployed on Vercel with Supabase as the database.
+
 Live: [bank-management-system-seven-sand.vercel.app](https://bank-management-system-seven-sand.vercel.app/login)
 
 
@@ -18,8 +20,11 @@ On top of this, the system uses automatic hash upgrades i.e if an older account 
 
 Tech stack:
 Backend -> Flask, Python
+
 Database -> PostgreSQL via Supabase
+
 Frontend -> Tailwind CSS, Space Grotesk and Inter via Google Fonts, Material Symbols icons [Google Stitch + Claude used for Frontend generation]
+
 Deployment -> Vercel 
 
 
